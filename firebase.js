@@ -32,7 +32,10 @@ export function isFirebaseReady() {
 export const CATEGORIES = [
   { id: "musiques", label: "Musiques", emoji: "🎵" },
   { id: "sports", label: "Sports", emoji: "⚽" },
-  { id: "voyages", label: "Voyages", emoji: "✈️" }
+  { id: "sportifs", label: "Sportifs", emoji: "🏅" },
+  { id: "voyages", label: "Voyages", emoji: "✈️" },
+  { id: "plats", label: "Plats", emoji: "🍽️" },
+  { id: "films", label: "Films", emoji: "🎬" }
 ];
 
 // --- Items ---

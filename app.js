@@ -191,7 +191,7 @@ function renderAdmin() {
       <label>Titre</label>
       <input type="text" id="item-title" placeholder="Ex : Stromae">
       <label>Chemin ou URL de la photo</label>
-      <input type="text" id="item-url" placeholder="images/musiques/stromae.jpg">
+      <input type="text" id="item-url" placeholder="images/${state.adminCategory}/exemple.jpg">
       <button class="btn btn-primary" id="btn-add-item">➕ Ajouter</button>
       <ul class="item-list" id="item-list">
         ${state.items.map((item) => {
