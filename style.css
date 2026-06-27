@@ -232,16 +232,29 @@ input:focus {
 }
 
 .duel-card img {
-  width: 100%;
-  height: 180px;
-  object-fit: cover;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
   display: block;
+}
+
+.duel-card .img-wrap {
+  width: 100%;
+  height: 200px;
+  max-height: 38vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: #e2e8f0;
+  padding: 0.35rem;
 }
 
 .duel-card .no-img {
   width: 100%;
-  height: 180px;
+  height: 200px;
+  max-height: 38vh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -368,11 +381,12 @@ input:focus {
 }
 
 .item-list img {
-  width: 48px;
-  height: 48px;
-  object-fit: cover;
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
   border-radius: 8px;
   background: #e2e8f0;
+  padding: 2px;
 }
 
 .item-list .item-title {
@@ -434,11 +448,13 @@ input:focus {
 .champion-reveal img {
   width: 120px;
   height: 120px;
-  object-fit: cover;
+  object-fit: contain;
   border-radius: 50%;
   border: 4px solid var(--gold);
   margin: 0.75rem auto;
   display: block;
+  background: #f1f5f9;
+  padding: 4px;
 }
 
 .champion-reveal .champion-name {
@@ -460,6 +476,175 @@ input:focus {
 
 .hidden {
   display: none !important;
+}
+
+/* --- Récap des duels --- */
+
+.recap-player-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.recap-player-tabs .tab {
+  flex: 0 1 auto;
+  min-width: 4.5rem;
+}
+
+.recap-list {
+  max-height: none;
+}
+
+.recap-duel {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+  background: #fafafa;
+}
+
+.recap-duel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 0.6rem;
+}
+
+.recap-match {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.recap-option {
+  flex: 1;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.5rem;
+  text-align: center;
+  background: #fff;
+  position: relative;
+}
+
+.recap-option.picked-mathis {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25);
+}
+
+.recap-option.picked-correct {
+  border-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.recap-option.picked-wrong {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+}
+
+.recap-img-wrap {
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e2e8f0;
+  border-radius: 8px;
+  margin-bottom: 0.4rem;
+  padding: 0.25rem;
+}
+
+.recap-img-wrap img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.recap-no-img {
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  background: #e2e8f0;
+  border-radius: 8px;
+  margin-bottom: 0.4rem;
+}
+
+.recap-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  display: block;
+  line-height: 1.2;
+}
+
+.recap-vs {
+  text-align: center;
+  font-weight: 900;
+  color: var(--bg1);
+  font-size: 0.9rem;
+}
+
+.recap-tag {
+  display: inline-block;
+  margin-top: 0.35rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 99px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.recap-tag.mathis {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.recap-tag.guest {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+.recap-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 99px;
+}
+
+.recap-badge.ok {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.recap-badge.ko {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.recap-badge.pending {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.recap-foot {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+@media (min-width: 480px) {
+  .recap-match {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .recap-vs {
+    flex: 0 0 2rem;
+  }
 }
 
 @media (min-width: 480px) {

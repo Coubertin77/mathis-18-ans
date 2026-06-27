@@ -9,7 +9,8 @@ import {
   getChampion,
   getUnlockedRounds,
   ROUNDS,
-  getDuelsForRound
+  getDuelsForRound,
+  getAllDuels
 } from "./bracket.js";
 
 const app = document.getElementById("app");
@@ -25,6 +26,7 @@ let state = {
   mathisPlayer: null,
   allPlayers: [],
   adminCategory: "musiques",
+  recapPlayerId: null,
   unsubscribers: []
 };
 
@@ -48,7 +50,7 @@ function resolveImageUrl(url) {
 function renderCard(item, onClick, label) {
   const src = resolveImageUrl(item.imageUrl);
   const imgPart = src
-    ? `<img src="${esc(src)}" alt="${esc(item.title)}" loading="lazy">`
+    ? `<div class="img-wrap"><img src="${esc(src)}" alt="${esc(item.title)}" loading="lazy"></div>`
     : `<div class="no-img">🎲</div>`;
   return `
     <div class="duel-card" data-id="${esc(item.id)}">
@@ -62,6 +64,58 @@ function esc(str) {
   const d = document.createElement("div");
   d.textContent = str || "";
   return d.innerHTML;
+}
+
+function buildRecapDuels(mathisAnswers, playerAnswers, bracketOrder, isMathisView) {
+  const duels = getAllDuels(mathisAnswers, bracketOrder);
+  if (duels.length === 0) {
+    return `<p class="hint">Aucun duel enregistré pour l'instant.</p>`;
+  }
+
+  return duels.map((duel, index) => {
+    const roundLabel = ROUNDS.find((r) => r.id === duel.roundId)?.label || duel.roundId;
+    const itemA = itemById(duel.a);
+    const itemB = itemById(duel.b);
+    const mathisPick = mathisAnswers[duel.key];
+    const guestPick = playerAnswers?.[duel.key];
+    const correct = guestPick && mathisPick && guestPick === mathisPick;
+    const isFinal = duel.roundId === "finale";
+
+    const roleA = mathisPick === duel.a ? "picked-mathis" : guestPick === duel.a ? (correct ? "picked-correct" : "picked-wrong") : "";
+    const roleB = mathisPick === duel.b ? "picked-mathis" : guestPick === duel.b ? (correct ? "picked-correct" : "picked-wrong") : "";
+
+    const status = isMathisView
+      ? ""
+      : guestPick
+        ? correct
+          ? `<span class="recap-badge ok">+1 pt${isFinal ? " · bonus possible" : ""}</span>`
+          : `<span class="recap-badge ko">0 pt</span>`
+        : `<span class="recap-badge pending">Pas répondu</span>`;
+
+    return `
+      <div class="recap-duel">
+        <div class="recap-duel-head">
+          <span>${roundLabel} · Duel ${index + 1}</span>
+          ${status}
+        </div>
+        <div class="recap-match">
+          <div class="recap-option ${roleA}">
+            ${resolveImageUrl(itemA.imageUrl) ? `<div class="recap-img-wrap"><img src="${esc(resolveImageUrl(itemA.imageUrl))}" alt=""></div>` : `<div class="recap-no-img">🎲</div>`}
+            <span class="recap-label">${esc(itemA.title)}</span>
+            ${mathisPick === duel.a ? `<span class="recap-tag mathis">Mathis</span>` : ""}
+            ${!isMathisView && guestPick === duel.a ? `<span class="recap-tag guest">Invité</span>` : ""}
+          </div>
+          <div class="recap-vs">VS</div>
+          <div class="recap-option ${roleB}">
+            ${resolveImageUrl(itemB.imageUrl) ? `<div class="recap-img-wrap"><img src="${esc(resolveImageUrl(itemB.imageUrl))}" alt=""></div>` : `<div class="recap-no-img">🎲</div>`}
+            <span class="recap-label">${esc(itemB.title)}</span>
+            ${mathisPick === duel.b ? `<span class="recap-tag mathis">Mathis</span>` : ""}
+            ${!isMathisView && guestPick === duel.b ? `<span class="recap-tag guest">Invité</span>` : ""}
+          </div>
+        </div>
+        ${!isMathisView && mathisPick ? `<p class="recap-foot">Choix de Mathis : <strong>${esc(itemById(mathisPick).title)}</strong></p>` : ""}
+      </div>`;
+  }).join("");
 }
 
 // --- Screens ---
@@ -180,6 +234,7 @@ function renderAdmin() {
   document.getElementById("btn-reset-players").addEventListener("click", resetPlayers);
   document.getElementById("btn-scores").addEventListener("click", () => {
     state.categoryId = state.adminCategory;
+    state.recapPlayerId = null;
     setupScoresView(state.adminCategory);
   });
 }
@@ -384,6 +439,7 @@ function renderPlayDone() {
       </div>
       <div class="panel">
         <button class="btn btn-primary" id="btn-scores">🏆 Voir le classement</button>
+        <button class="btn btn-secondary" id="btn-recap">📋 Voir mes choix</button>
       </div>`;
   } else {
     const score = calculateScore(player.answers, mathisAnswers, bracketOrder, FINAL_BONUS);
@@ -402,11 +458,16 @@ function renderPlayDone() {
       </div>
       <div class="panel">
         <button class="btn btn-primary" id="btn-scores">🏆 Voir le classement</button>
+        <button class="btn btn-secondary" id="btn-recap">📋 Voir mes choix vs Mathis</button>
         <button class="btn btn-secondary" id="btn-home">🏠 Accueil</button>
       </div>`;
   }
 
   document.getElementById("btn-scores")?.addEventListener("click", () => setupScoresView(state.categoryId));
+  document.getElementById("btn-recap")?.addEventListener("click", () => {
+    state.recapPlayerId = state.playerId;
+    setupRecapView(state.categoryId);
+  });
   document.getElementById("btn-home")?.addEventListener("click", () => navigate("home"));
 }
 
@@ -414,6 +475,9 @@ function setupScoresView(categoryId) {
   cleanup();
   state.screen = "scores";
   state.categoryId = categoryId;
+  if (!state.recapPlayerId && state.mathisPlayer) {
+    state.recapPlayerId = state.mathisPlayer.id;
+  }
 
   const unsubGame = db.listenGameState((gs) => {
     if (gs?.activeCategory === categoryId) state.gameState = gs;
@@ -424,6 +488,7 @@ function setupScoresView(categoryId) {
   const unsubPlayers = db.listenPlayers(categoryId, (players) => {
     state.allPlayers = players;
     state.mathisPlayer = players.find((p) => p.isMathis) || null;
+    if (!state.recapPlayerId && state.mathisPlayer) state.recapPlayerId = state.mathisPlayer.id;
     if (state.screen === "scores") showScores();
   });
   state.unsubscribers.push(unsubPlayers);
@@ -485,12 +550,111 @@ function showScores() {
               <span class="player-score">${p.score.total}</span>
             </li>`).join("")}
         </ul>`}
+    </div>
+    <div class="panel">
+      <h2>📋 Détail des choix</h2>
+      <p class="hint" style="margin-bottom:0.75rem">Compare les réponses de chaque joueur avec Mathis.</p>
+      <div class="recap-player-tabs" id="recap-tabs">
+        ${state.mathisPlayer ? `<button class="tab recap-tab ${state.recapPlayerId === state.mathisPlayer.id ? "active" : ""}" data-id="${esc(state.mathisPlayer.id)}">👑 Mathis</button>` : ""}
+        ${guests.map((p) => `<button class="tab recap-tab ${state.recapPlayerId === p.id ? "active" : ""}" data-id="${esc(p.id)}">${esc(p.name)}</button>`).join("")}
+      </div>
+      ${state.recapPlayerId ? `<div class="recap-list">${renderRecapContent(state.recapPlayerId)}</div>` : `<p class="hint">Sélectionnez un joueur ci-dessus.</p>`}
     </div>`;
 
   document.getElementById("btn-back").addEventListener("click", () => {
     if (state.playerId) navigate("play");
     else if (sessionStorage.getItem("mathis18_admin")) navigate("admin");
     else navigate("home");
+  });
+
+  document.querySelectorAll(".recap-tab").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.recapPlayerId = btn.dataset.id;
+      showScores();
+    });
+  });
+}
+
+function renderRecapContent(playerId) {
+  const player = state.allPlayers.find((p) => p.id === playerId) || state.player;
+  if (!player) return `<p class="hint">Joueur introuvable.</p>`;
+
+  const bracketOrder = state.gameState?.bracketOrder || [];
+  const mathisAnswers = state.mathisPlayer?.answers || {};
+  const isMathisView = player.isMathis;
+
+  return `
+    <h3 style="margin-bottom:0.75rem">${isMathisView ? "Les choix de Mathis" : `Choix de ${esc(player.name)} vs Mathis`}</h3>
+    ${buildRecapDuels(mathisAnswers, player.answers || {}, bracketOrder, isMathisView)}`;
+}
+
+function setupRecapView(categoryId, playerId = null) {
+  cleanup();
+  state.screen = "recap";
+  state.categoryId = categoryId;
+  state.recapPlayerId = playerId || state.playerId || null;
+
+  const unsubGame = db.listenGameState((gs) => {
+    if (gs?.activeCategory === categoryId) state.gameState = gs;
+    if (state.screen === "recap") showRecap();
+  });
+  state.unsubscribers.push(unsubGame);
+
+  const unsubPlayers = db.listenPlayers(categoryId, (players) => {
+    state.allPlayers = players;
+    state.mathisPlayer = players.find((p) => p.isMathis) || null;
+    if (!state.recapPlayerId && state.mathisPlayer) state.recapPlayerId = state.mathisPlayer.id;
+    if (state.screen === "recap") showRecap();
+  });
+  state.unsubscribers.push(unsubPlayers);
+
+  const unsubItems = db.listenItems(categoryId, (items) => {
+    state.items = items;
+    state.itemsMap = Object.fromEntries(items.map((i) => [i.id, i]));
+    if (state.screen === "recap") showRecap();
+  });
+  state.unsubscribers.push(unsubItems);
+
+  db.getGameState().then((gs) => {
+    state.gameState = gs;
+    showRecap();
+  });
+}
+
+function showRecap() {
+  const categoryId = state.categoryId || state.gameState?.activeCategory;
+  const cat = CATEGORIES.find((c) => c.id === categoryId);
+  const guests = state.allPlayers.filter((p) => !p.isMathis);
+  const isAdmin = sessionStorage.getItem("mathis18_admin");
+
+  app.innerHTML = `
+    <button class="back-link" id="btn-back">← Retour</button>
+    <h1>📋 Détail des duels</h1>
+    <p class="subtitle">${cat?.emoji || ""} ${cat?.label || categoryId}</p>
+    <div class="panel">
+      <p class="hint" style="margin-bottom:0.75rem">
+        🟡 Mathis · 🟢 bon choix invité · 🔴 mauvais choix
+      </p>
+      <div class="recap-player-tabs">
+        ${state.mathisPlayer ? `<button class="tab recap-tab ${state.recapPlayerId === state.mathisPlayer.id ? "active" : ""}" data-id="${esc(state.mathisPlayer.id)}">👑 Mathis</button>` : ""}
+        ${guests.map((p) => `<button class="tab recap-tab ${state.recapPlayerId === p.id ? "active" : ""}" data-id="${esc(p.id)}">${esc(p.name)}</button>`).join("")}
+      </div>
+    </div>
+    <div class="panel recap-list">
+      ${state.recapPlayerId ? renderRecapContent(state.recapPlayerId) : `<p class="hint">Choisissez un joueur.</p>`}
+    </div>`;
+
+  document.getElementById("btn-back").addEventListener("click", () => {
+    if (state.playerId && !isAdmin) navigate("play");
+    else if (isAdmin) setupScoresView(categoryId);
+    else navigate("home");
+  });
+
+  document.querySelectorAll(".recap-tab").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.recapPlayerId = btn.dataset.id;
+      showRecap();
+    });
   });
 }
 
